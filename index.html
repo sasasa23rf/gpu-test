@@ -128,12 +128,14 @@
             <div id="device-details"></div>
         </div>
         
+        <!-- Desktop: Solo WebGPU button -->
         <div id="desktop-controls">
-            <button id="webgpu-test" onclick="startWebGPUTest()">Avvia Test GPU</button>
+            <button id="webgpu-test" onclick="startWebGPUTest()" disabled>Avvia Test GPU</button>
         </div>
         
+        <!-- Mobile: Multipli test buttons -->
         <div id="mobile-controls" class="mobile-buttons" style="display:none;">
-            <button id="webgpu-mobile" onclick="startWebGPUTest()">🚀 Test GPU</button>
+            <button id="webgpu-mobile" onclick="startWebGPUTest()" disabled>🚀 Test GPU</button>
             <button id="canvas-test" onclick="startCanvasTest()">🎨 Test Canvas 2D</button>
             <button id="webgl-test" onclick="startWebGLTest()">🔺 Test WebGL</button>
         </div>
