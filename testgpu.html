@@ -130,12 +130,12 @@
         
         <!-- Desktop: Solo WebGPU button -->
         <div id="desktop-controls">
-            <button id="webgpu-test" onclick="startWebGPUTest()" disabled>Avvia Test GPU</button>
+            <button id="webgpu-test" disabled>Avvia Test GPU</button>
         </div>
         
         <!-- Mobile: Solo WebGPU -->
         <div id="mobile-controls" class="mobile-buttons" style="display:none;">
-            <button id="webgpu-mobile" onclick="startWebGPUTest()" disabled>🚀 Test GPU</button>
+            <button id="webgpu-mobile" disabled>🚀 Test GPU</button>
         </div>
         
         <div class="progress" id="progress-container" style="display:none;">
@@ -440,7 +440,12 @@
             document.getElementById("results").scrollIntoView({behavior:"smooth"});
         }
 
-        window.addEventListener("load", detectGPU);
+        // Aggiungi event listener per i bottoni
+        window.addEventListener("load", () => {
+            detectGPU();
+            document.getElementById("webgpu-test").addEventListener("click", startWebGPUTest);
+            document.getElementById("webgpu-mobile").addEventListener("click", startWebGPUTest);
+        });
     </script>
 </body>
 </html>
