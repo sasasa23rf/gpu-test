@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ GPU Velocità Test ⚡<br>Desktop e Mobile</title>
+    <title>⚡ GPU Velocità Test </title>
     <style>
         * {margin:0;padding:0;box-sizing:border-box;}
         body {
@@ -122,7 +122,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>⚡ GPU velocità Test ⚡<br>Desktop e Mobile</h1>
+        <h1>⚡ GPU velocità Test</h1>
         
         <div id="device-info" class="device-info">
             <div id="device-details"></div>
@@ -133,11 +133,9 @@
             <button id="webgpu-test" onclick="startWebGPUTest()" disabled>Avvia Test GPU</button>
         </div>
         
-        <!-- Mobile: Multipli test buttons -->
+        <!-- Mobile: Solo WebGPU -->
         <div id="mobile-controls" class="mobile-buttons" style="display:none;">
-            <button id="webgpu-mobile" onclick="startWebGPUTest()" disabled>🚀 Test GPU Mobile</button>
-            <button id="canvas-test" onclick="startCanvasTest()">🎨 Test Canvas 2D</button>
-            <button id="webgl-test" onclick="startWebGLTest()">🔺 Test WebGL</button>
+            <button id="webgpu-mobile" onclick="startWebGPUTest()" disabled>🚀 Test GPU</button>
         </div>
         
         <div class="progress" id="progress-container" style="display:none;">
@@ -328,111 +326,6 @@
                 testRunning = false;
                 hideProgress();
             }
-        }
-
-        // Test Canvas 2D (solo per mobile)
-        async function startCanvasTest() {
-            if (testRunning) return;
-            testRunning = true;
-            showProgress("Test Canvas 2D in corso...");
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 800;
-            canvas.height = 600;
-            const ctx = canvas.getContext('2d');
-            
-            const startTime = performance.now();
-            const iterations = 1000;
-            
-            for (let i = 0; i < iterations; i++) {
-                ctx.fillStyle = `hsl(${i % 360}, 70%, 50%)`;
-                ctx.fillRect(Math.random() * 800, Math.random() * 600, 50, 50);
-                ctx.beginPath();
-                ctx.arc(Math.random() * 800, Math.random() * 600, 25, 0, Math.PI * 2);
-                ctx.fill();
-                
-                if (i % 50 === 0) {
-                    updateProgress((i / iterations) * 100);
-                    await new Promise(resolve => setTimeout(resolve, 1));
-                }
-            }
-            
-            const elapsed = (performance.now() - startTime) / 1000;
-            
-            finishTest("Canvas 2D", {
-                "Tempo": `${elapsed.toFixed(2)}s`,
-                "Operazioni": iterations * 2,
-                "FPS equivalenti": `${(iterations / elapsed).toFixed(1)}`,
-                "Operazioni/sec": `${((iterations * 2) / elapsed).toFixed(0)}`
-            });
-        }
-        
-        // Test WebGL (solo per mobile)
-        async function startWebGLTest() {
-            if (testRunning) return;
-            testRunning = true;
-            showProgress("Test WebGL in corso...");
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            
-            if (!gl) {
-                alert("WebGL non supportato");
-                testRunning = false;
-                hideProgress();
-                return;
-            }
-            
-            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-            gl.shaderSource(vertexShader, `
-                attribute vec2 position;
-                void main() {
-                    gl_Position = vec4(position, 0.0, 1.0);
-                }
-            `);
-            gl.compileShader(vertexShader);
-            
-            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-            gl.shaderSource(fragmentShader, `
-                precision mediump float;
-                uniform float time;
-                void main() {
-                    vec2 uv = gl_FragCoord.xy / vec2(512.0);
-                    float color = sin(uv.x * 10.0 + time) * cos(uv.y * 10.0 + time);
-                    gl_FragColor = vec4(vec3(color), 1.0);
-                }
-            `);
-            gl.compileShader(fragmentShader);
-            
-            const program = gl.createProgram();
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
-            gl.linkProgram(program);
-            gl.useProgram(program);
-            
-            const startTime = performance.now();
-            const frames = 300;
-            
-            for (let frame = 0; frame < frames; frame++) {
-                gl.uniform1f(gl.getUniformLocation(program, 'time'), frame * 0.1);
-                gl.drawArrays(gl.TRIANGLES, 0, 3);
-                
-                if (frame % 20 === 0) {
-                    updateProgress((frame / frames) * 100);
-                    await new Promise(resolve => setTimeout(resolve, 1));
-                }
-            }
-            
-            const elapsed = (performance.now() - startTime) / 1000;
-            
-            finishTest("WebGL", {
-                "Tempo": `${elapsed.toFixed(2)}s`,
-                "Frame renderizzati": frames,
-                "FPS medio": `${(frames / elapsed).toFixed(1)}`,
-                "Pixel processati": `${(512 * 512 * frames).toLocaleString()}`
-            });
         }
 
         function showProgress(message = "") {
