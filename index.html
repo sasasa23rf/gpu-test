@@ -57,6 +57,22 @@
         text-align:left;
         display:none;
     }
+    .user-record-box {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 10px 15px;
+        margin: 15px 0;
+        text-align: center;
+        display: none;
+    }
+    .user-record-box h4 {
+        margin-bottom: 5px;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .user-record-box .metric-value {
+        font-size: 1.4em;
+    }
     .mobile-buttons {
         display:flex;
         flex-direction:column;
@@ -93,6 +109,80 @@
         border-radius:8px;
     }
     .metric-value {font-weight:bold;color:#4facfe;}
+
+    /* --- STILI CLASSIFICA --- */
+    #leaderboard-section {
+      margin-top: 40px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 15px;
+      padding: 20px;
+    }
+    #leaderboard-section h2 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    #leaderboard-container {
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 10px; /* for scrollbar */
+    }
+    #leaderboard-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    #leaderboard-container::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    #leaderboard-container::-webkit-scrollbar-thumb {
+      background: linear-gradient(45deg,#4facfe,#00f2fe);
+      border-radius: 10px;
+    }
+    .leaderboard-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+      transition: background 0.2s ease;
+    }
+    .leaderboard-entry:hover {
+        background: rgba(255,255,255,0.15);
+    }
+    .leaderboard-entry .rank {
+      font-weight: bold;
+      color: #4facfe;
+      flex-basis: 10%;
+      text-align: left;
+    }
+    .leaderboard-entry .name {
+      flex-basis: 40%;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .leaderboard-entry .city {
+      flex-basis: 30%;
+      text-align: left;
+      color: rgba(255,255,255,0.8);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .leaderboard-entry .time {
+      font-weight: bold;
+      flex-basis: 20%;
+      text-align: right;
+    }
+    .leaderboard-loading {
+        padding: 20px;
+        color: rgba(255,255,255,0.8);
+    }
 
     /* --- STILI COMUNI --- */
     button {
@@ -242,6 +332,15 @@
           </form>
         </div>
       </div>
+      
+      <!-- SEZIONE CLASSIFICA -->
+      <div id="leaderboard-section">
+        <h2>🏆 Classifica Globale</h2>
+        <div id="leaderboard-container">
+          <!-- Le voci della classifica verranno inserite qui da JavaScript -->
+        </div>
+      </div>
+
     </div>
 
     <!-- SEZIONE TEST GPU -->
@@ -252,6 +351,12 @@
       </div>
       
       <h1>⚡ GPU velocità Test</h1>
+
+      <!-- Contenitore per il record dell'utente -->
+      <div id="user-record-box" class="user-record-box">
+          <h4>Il tuo record personale</h4>
+          <span id="user-record" class="metric-value">Nessun record</span>
+      </div>
       
       <div id="device-info" class="device-info">
         <div id="device-details"></div>
@@ -309,10 +414,12 @@
 
     // Funzioni che verranno definite nel modulo
     function handleLogin(event) {
+      event.preventDefault(); // Aggiunto per evitare il ricaricamento della pagina
       if (window.moduleHandleLogin) window.moduleHandleLogin(event);
     }
     
     function handleRegister(event) {
+      event.preventDefault(); // Aggiunto per evitare il ricaricamento della pagina
       if (window.moduleHandleRegister) window.moduleHandleRegister(event);
     }
     
@@ -329,7 +436,7 @@
     // Importa i moduli necessari da Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, updateDoc, getDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // --- CONFIGURAZIONE E INIZIALIZZAZIONE FIREBASE ---
     const firebaseConfig = {
@@ -358,10 +465,11 @@
       document.getElementById('gpu-section').classList.add('hidden');
     }
 
-    function showGPUSection() {
+    async function showGPUSection() {
       document.getElementById('auth-section').classList.add('hidden');
       document.getElementById('gpu-section').classList.remove('hidden');
-      // Inizializza la sezione GPU
+      
+      await loadUserRecord();
       detectGPU();
     }
 
@@ -374,11 +482,11 @@
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
       loadingDiv.style.display = 'none';
-      btn.disabled = false;
+      if(btn) btn.disabled = false;
 
       if (type === 'loading') {
         loadingDiv.style.display = 'block';
-        btn.disabled = true;
+        if(btn) btn.disabled = true;
       } else if (type === 'error') {
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
@@ -402,7 +510,7 @@
     }
 
     async function handleLogin(e) {
-      e.preventDefault();
+      // La prevenzione del default è già nella funzione globale
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
       const formId = 'login';
@@ -419,7 +527,7 @@
     }
 
     async function handleRegister(e) {
-      e.preventDefault();
+      // La prevenzione del default è già nella funzione globale
       const email = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
@@ -446,8 +554,7 @@
           region: region,
           province: province,
           city: city,
-          createdAt: new Date(),
-          gpuTests: []
+          createdAt: new Date()
         });
 
         showMessage('success', 'Registrazione completata con successo! 🎉', formId);
@@ -467,31 +574,74 @@
       }
     }
 
+    async function loadUserRecord() {
+      const recordBox = document.getElementById('user-record-box');
+      const recordDisplay = document.getElementById('user-record');
+      
+      recordBox.style.display = 'none';
+      recordDisplay.textContent = 'Nessun record';
+
+      if (!currentUser) return;
+
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.bestGPUTimeFormatted) {
+            recordDisplay.textContent = userData.bestGPUTimeFormatted;
+            recordBox.style.display = 'block';
+          }
+        }
+      } catch (error) {
+        console.error("Errore nel caricare il record dell'utente:", error);
+      }
+    }
+
+    // --- GESTIONE CLASSIFICA ---
+    function displayLeaderboard() {
+      const leaderboardContainer = document.getElementById('leaderboard-container');
+      if (!leaderboardContainer) return;
+
+      leaderboardContainer.innerHTML = '<div class="leaderboard-loading">Caricamento classifica...</div>';
+
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("bestGPUTime", ">", 0), orderBy("bestGPUTime"));
+
+      onSnapshot(q, (querySnapshot) => {
+        if (querySnapshot.empty) {
+          leaderboardContainer.innerHTML = '<div class="leaderboard-loading">Nessun dato da mostrare.</div>';
+          return;
+        }
+
+        let rank = 1;
+        let html = '';
+        querySnapshot.forEach((doc) => {
+          const user = doc.data();
+          if (user.name && user.city && user.bestGPUTimeFormatted) {
+            html += `
+              <div class="leaderboard-entry">
+                <span class="rank">${rank}.</span>
+                <span class="name">${user.name}</span>
+                <span class="city">${user.city}</span>
+                <span class="time">${user.bestGPUTimeFormatted}</span>
+              </div>
+            `;
+            rank++;
+          }
+        });
+        leaderboardContainer.innerHTML = html;
+      }, (error) => {
+        console.error("Errore nel caricare la classifica: ", error);
+        leaderboardContainer.innerHTML = '<div class="leaderboard-loading" style="color: #ff6b6b;">Impossibile caricare la classifica. Controlla le regole di sicurezza di Firestore.</div>';
+      });
+    }
+
     // --- GESTIONE REGIONI E PROVINCE ---
     const provinceByRegion = {
-      "Abruzzo": ["L'Aquila","Chieti","Pescara","Teramo"],
-      "Basilicata": ["Potenza","Matera"],
-      "Calabria": ["Catanzaro","Cosenza","Crotone","Reggio Calabria","Vibo Valentia"],
-      "Campania": ["Avellino","Benevento","Caserta","Napoli","Salerno"],
-      "Emilia-Romagna": ["Bologna","Ferrara","Forlì-Cesena","Modena","Parma","Piacenza","Ravenna","Reggio Emilia","Rimini"],
-      "Friuli Venezia Giulia": ["Gorizia","Pordenone","Trieste","Udine"],
-      "Lazio": ["Frosinone","Latina","Rieti","Roma","Viterbo"],
-      "Liguria": ["Genova","Imperia","La Spezia","Savona"],
-      "Lombardia": ["Bergamo","Brescia","Como","Cremona","Lecco","Lodi","Mantova","Milano","Monza e Brianza","Pavia","Sondrio","Varese"],
-      "Marche": ["Ancona","Ascoli Piceno","Fermo","Macerata","Pesaro e Urbino"],
-      "Molise": ["Campobasso","Isernia"],
-      "Piemonte": ["Alessandria","Asti","Biella","Cuneo","Novara","Torino","Verbano-Cusio-Ossola","Vercelli"],
-      "Puglia": ["Bari","Barletta-Andria-Trani","Brindisi","Foggia","Lecce","Taranto"],
-      "Sardegna": ["Cagliari","Nuoro","Oristano","Sassari","Sud Sardegna"],
-      "Sicilia": ["Agrigento","Caltanissetta","Catania","Enna","Messina","Palermo","Ragusa","Siracusa","Trapani"],
-      "Toscana": ["Arezzo","Firenze","Grosseto","Livorno","Lucca","Massa-Carrara","Pisa","Pistoia","Prato","Siena"],
-      "Trentino-Alto Adige": ["Bolzano","Trento"],
-      "Umbria": ["Perugia","Terni"],
-      "Valle d'Aosta": ["Aosta"],
-      "Veneto": ["Belluno","Padova","Rovigo","Treviso","Venezia","Verona","Vicenza"]
+      "Abruzzo": ["L'Aquila","Chieti","Pescara","Teramo"], "Basilicata": ["Potenza","Matera"], "Calabria": ["Catanzaro","Cosenza","Crotone","Reggio Calabria","Vibo Valentia"], "Campania": ["Avellino","Benevento","Caserta","Napoli","Salerno"], "Emilia-Romagna": ["Bologna","Ferrara","Forlì-Cesena","Modena","Parma","Piacenza","Ravenna","Reggio Emilia","Rimini"], "Friuli Venezia Giulia": ["Gorizia","Pordenone","Trieste","Udine"], "Lazio": ["Frosinone","Latina","Rieti","Roma","Viterbo"], "Liguria": ["Genova","Imperia","La Spezia","Savona"], "Lombardia": ["Bergamo","Brescia","Como","Cremona","Lecco","Lodi","Mantova","Milano","Monza e Brianza","Pavia","Sondrio","Varese"], "Marche": ["Ancona","Ascoli Piceno","Fermo","Macerata","Pesaro e Urbino"], "Molise": ["Campobasso","Isernia"], "Piemonte": ["Alessandria","Asti","Biella","Cuneo","Novara","Torino","Verbano-Cusio-Ossola","Vercelli"], "Puglia": ["Bari","Barletta-Andria-Trani","Brindisi","Foggia","Lecce","Taranto"], "Sardegna": ["Cagliari","Nuoro","Oristano","Sassari","Sud Sardegna"], "Sicilia": ["Agrigento","Caltanissetta","Catania","Enna","Messina","Palermo","Ragusa","Siracusa","Trapani"], "Toscana": ["Arezzo","Firenze","Grosseto","Livorno","Lucca","Massa-Carrara","Pisa","Pistoia","Prato","Siena"], "Trentino-Alto Adige": ["Bolzano","Trento"], "Umbria": ["Perugia","Terni"], "Valle d'Aosta": ["Aosta"], "Veneto": ["Belluno","Padova","Rovigo","Treviso","Venezia","Verona","Vicenza"]
     };
-
-    // Rende disponibile globalmente per loadProvinces
     window.provinceByRegion = provinceByRegion;
 
     function loadRegions() {
@@ -504,30 +654,8 @@
       });
     }
 
-    function loadProvinces() {
-      const region = document.getElementById('region').value;
-      const provinceSelect = document.getElementById('province');
-      provinceSelect.innerHTML = '<option value="">Seleziona Provincia</option>';
-      if (region && provinceByRegion[region]) {
-        provinceByRegion[region].forEach(prov => {
-          const opt = document.createElement('option');
-          opt.value = prov;
-          opt.textContent = prov;
-          provinceSelect.appendChild(opt);
-        });
-      }
-    }
-
-    let currentTab='login';
-    function switchTab(tab){
-      document.querySelectorAll('.tab-button').forEach(btn=>btn.classList.remove('active'));
-      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-      document.querySelectorAll('.form-content').forEach(form=>form.classList.remove('active'));
-      document.getElementById(`${tab}-form`).classList.add('active');
-      currentTab=tab;
-    }
-
     // --- GESTIONE TEST GPU ---
+    // (Il resto del codice per il test GPU rimane invariato)
     async function detectGPU() {
       isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isTablet = /iPad|Android(?=.*(?:Tablet|Tab))/i.test(navigator.userAgent);
@@ -686,10 +814,8 @@
         if (isMobile) {
           results["Modalità"] = "Mobile (ottimizzato)";
         }
-
-        // Salva i risultati del test nel database Firebase
-        await saveTestResults(results);
         
+        await saveTestResults(results);
         finishTest("WebGPU", results);
 
       } catch (err) {
@@ -703,39 +829,39 @@
       if (!currentUser) return;
       
       try {
-        // Estrai il tempo dal risultato (rimuovi la 's' e converti in numero)
         const currentTime = parseFloat(results.Tempo.replace('s', ''));
         const deviceType = isMobile ? 'mobile' : 'desktop';
         
-        // Leggi i dati attuali dell'utente per confrontare
         const userRef = doc(db, "users", currentUser.uid);
         const userDoc = await getDoc(userRef);
+        
+        let shouldUpdate = true;
         
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const existingBestTime = userData.bestGPUTime;
           
-          // Se esiste già un tempo migliore e quello attuale è peggiore, non salvare
           if (existingBestTime && currentTime >= existingBestTime) {
             console.log(`Tempo attuale (${currentTime}s) non migliore del record (${existingBestTime}s). Non salvato.`);
-            return;
+            shouldUpdate = false;
           }
         }
         
-        // Il tempo è migliore (o è il primo test), salva solo il tempo
-        await updateDoc(userRef, {
-          bestGPUTime: currentTime,
-          bestGPUTimeFormatted: results.Tempo,
-          lastTestDate: new Date(),
-          deviceType: deviceType,
-          lastTestInfo: {
-            browser: getBrowserInfo(),
-            screenResolution: `${screen.width}×${screen.height}`,
-            gpuInfo: getGPUInfo()
-          }
-        });
-
-        console.log(`🎉 Nuovo record salvato per utente ${currentUser.email}: ${results.Tempo}`);
+        if (shouldUpdate) {
+            await updateDoc(userRef, {
+              bestGPUTime: currentTime,
+              bestGPUTimeFormatted: results.Tempo,
+              lastTestDate: new Date(),
+              deviceType: deviceType,
+              lastTestInfo: {
+                browser: getBrowserInfo(),
+                screenResolution: `${screen.width}×${screen.height}`,
+                gpuInfo: getGPUInfo()
+              }
+            });
+            console.log(`🎉 Nuovo record salvato per utente ${currentUser.email}: ${results.Tempo}`);
+            await loadUserRecord(); 
+        }
         
       } catch (error) {
         console.error("Errore nel salvare i risultati:", error);
@@ -793,6 +919,7 @@
     // --- INIZIALIZZAZIONE ---
     window.addEventListener("load", () => {
       loadRegions();
+      displayLeaderboard(); // Carica la classifica al caricamento della pagina
     });
 
     // Rende le funzioni disponibili globalmente
@@ -802,7 +929,7 @@
     window.moduleStartWebGPUTest = startWebGPUTest;
 
     // Monitor dello stato di autenticazione
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
         console.log("Utente autenticato:", user.email);
