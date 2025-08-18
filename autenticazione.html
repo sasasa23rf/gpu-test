@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔐 Accedi | GPU Velocità Test</title>
+  <style>
+    /* --- STILI UGUALI AI TUOI --- */
+    * {margin:0;padding:0;box-sizing:border-box;}
+    body {
+      font-family:'Segoe UI',Tahoma,Verdana,sans-serif;
+      background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      color:white;padding:10px;
+    }
+    .container {
+      background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);
+      border-radius:20px;padding:40px;max-width:450px;width:90%;
+      box-shadow:0 8px 32px rgba(0,0,0,0.3);text-align:center;
+    }
+    h1 {font-size:2.2em;margin-bottom:10px;text-shadow:2px 2px 4px rgba(0,0,0,0.3);}
+    .subtitle {color:rgba(255,255,255,0.8);margin-bottom:30px;font-size:1em;}
+    .form-tabs {display:flex;margin-bottom:30px;background:rgba(255,255,255,0.1);
+      border-radius:15px;padding:5px;}
+    .tab-button {flex:1;padding:12px;background:transparent;border:none;
+      color:rgba(255,255,255,0.7);border-radius:10px;cursor:pointer;
+      transition:all 0.3s ease;font-size:1em;}
+    .tab-button.active {background:linear-gradient(45deg,#4facfe,#00f2fe);
+      color:white;box-shadow:0 4px 15px rgba(0,0,0,0.2);}
+    .form-container {position:relative;overflow:hidden;}
+    .form-content {display:none;animation:slideIn 0.3s ease;}
+    .form-content.active {display:block;}
+    @keyframes slideIn {from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+    .form-group {margin-bottom:20px;text-align:left;}
+    label {display:block;margin-bottom:8px;font-weight:500;color:rgba(255,255,255,0.9);font-size:0.95em;}
+    input, select {
+      width:100%;padding:12px 15px;border:none;border-radius:10px;
+      background:rgba(255,255,255,0.15);color:white;font-size:1em;
+      transition:all 0.3s ease;backdrop-filter:blur(5px);
+    }
+    input::placeholder {color:rgba(255,255,255,0.6);}
+    input:focus, select:focus {outline:none;background:rgba(255,255,255,0.25);
+      box-shadow:0 0 0 2px rgba(79,172,254,0.5);}
+    select {cursor:pointer;} select option {background:#333;color:white;}
+    .location-grid {display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+    button {width:100%;background:linear-gradient(45deg,#4facfe,#00f2fe);
+      border:none;color:white;padding:15px;font-size:1.1em;border-radius:50px;
+      cursor:pointer;margin:20px 0 10px;transition:all 0.3s ease;
+      box-shadow:0 4px 15px rgba(0,0,0,0.2);font-weight:600;}
+    button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3);}
+    button:active{transform:translateY(0);}
+    button:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+    .loading{display:none;color:rgba(255,255,255,0.8);margin:10px 0;}
+    .error{background:rgba(255,0,0,0.2);border:1px solid rgba(255,0,0,0.5);
+      border-radius:10px;padding:12px;margin:10px 0;color:#ff6b6b;
+      font-size:0.9em;display:none;}
+    .success{background:rgba(0,255,0,0.2);border:1px solid rgba(0,255,0,0.5);
+      border-radius:10px;padding:12px;margin:10px 0;color:#51cf66;
+      font-size:0.9em;display:none;}
+    @media (max-width:768px){.container{padding:25px;width:95%;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Accedi</h1>
+    <p class="subtitle">Accedi per testare la tua GPU</p>
+
+    <div class="form-tabs">
+      <button class="tab-button active" onclick="switchTab('login')">Accedi</button>
+      <button class="tab-button" onclick="switchTab('register')">Registrati</button>
+    </div>
+
+    <div class="form-container">
+      <!-- LOGIN -->
+      <div id="login-form" class="form-content active">
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" placeholder="tua@email.com" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="La tua password" required>
+          </div>
+          <div class="error" id="login-error"></div>
+          <div class="success" id="login-success"></div>
+          <div class="loading" id="login-loading">🔄 Accesso in corso...</div>
+          <button type="submit" id="login-btn">🚀 Accedi</button>
+        </form>
+      </div>
+
+      <!-- REGISTRAZIONE -->
+      <div id="register-form" class="form-content">
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label for="register-name">Nome Completo</label>
+            <input type="text" id="register-name" placeholder="Mario Rossi" required>
+          </div>
+          <div class="form-group">
+            <label for="register-email">Email</label>
+            <input type="email" id="register-email" placeholder="mario@email.com" required>
+          </div>
+          <div class="form-group">
+            <label for="register-password">Password</label>
+            <input type="password" id="register-password" placeholder="Minimo 6 caratteri" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="confirm-password">Conferma Password</label>
+            <input type="password" id="confirm-password" placeholder="Ripeti la password" required>
+          </div>
+
+          <div class="location-grid">
+            <div class="form-group">
+              <label for="region">Regione</label>
+              <select id="region" required onchange="loadProvinces()">
+                <option value="">Seleziona Regione</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="province">Provincia</label>
+              <select id="province" required>
+                <option value="">Prima seleziona Regione</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="city">Comune</label>
+            <input type="text" id="city" placeholder="Inserisci il tuo comune" required>
+          </div>
+
+          <div class="error" id="register-error"></div>
+          <div class="success" id="register-success"></div>
+          <div class="loading" id="register-loading">📝 Registrazione in corso...</div>
+
+          <button type="submit" id="register-btn">✨ Registrati</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Importa i moduli necessari da Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // --- CONFIGURAZIONE E INIZIALIZZAZIONE FIREBASE ---
+    // La tua configurazione di Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDnhIjY5MQreMbr8-lMSGiiaZgTsTbsFAo",
+      authDomain: "x4-game-b38ea.firebaseapp.com",
+      projectId: "x4-game-b38ea",
+      storageBucket: "x4-game-b38ea.firebasestorage.app",
+      messagingSenderId: "234053148794",
+      appId: "1:234053148794:web:1eadb88554aa3c1058dbc3",
+      measurementId: "G-34MSCWGN5P"
+    };
+
+    // Inizializza Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // --- UTILITY PER GESTIRE IL FEEDBACK UTENTE ---
+    function showMessage(type, message, formId) {
+        const errorDiv = document.getElementById(`${formId}-error`);
+        const successDiv = document.getElementById(`${formId}-success`);
+        const loadingDiv = document.getElementById(`${formId}-loading`);
+        const btn = document.getElementById(`${formId}-btn`);
+
+        // Resetta tutti i messaggi
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+        loadingDiv.style.display = 'none';
+        btn.disabled = false;
+
+        // Visualizza il messaggio corretto
+        if (type === 'loading') {
+            loadingDiv.style.display = 'block';
+            btn.disabled = true;
+        } else if (type === 'error') {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        } else if (type === 'success') {
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+    }
+
+    function getErrorMessage(code) {
+      switch(code) {
+        case 'auth/email-already-in-use': return 'Questa email è già registrata.';
+        case 'auth/invalid-email': return 'L\'indirizzo email non è valido.';
+        case 'auth/wrong-password': return 'La password inserita non è corretta.';
+        case 'auth/user-not-found': 
+        case 'auth/invalid-credential': return 'Le credenziali inserite non sono valide. Controlla email e password, o registrati se non l\'hai ancora fatto.';
+        case 'auth/weak-password': return 'La password deve contenere almeno 6 caratteri.';
+        case 'auth/missing-password': return 'Inserisci la password.';
+        default: return `Si è verificato un errore: ${code}`;
+      }
+    }
+
+    // --- GESTIONE LOGIN ---
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const formId = 'login';
+      
+      console.log('Tentativo di login con:', email, password);
+
+      showMessage('loading', '', formId);
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        showMessage('success', 'Accesso effettuato con successo! 🎉', formId);
+        // Reindirizza l'utente a index.html
+        window.location.href = 'index.html';
+      } catch (error) {
+        console.error("Login failed:", error);
+        showMessage('error', getErrorMessage(error.code), formId);
+      }
+    }
+
+    // --- GESTIONE REGISTRAZIONE ---
+    async function handleRegister(e) {
+      e.preventDefault();
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const name = document.getElementById('register-name').value;
+      const region = document.getElementById('region').value;
+      const province = document.getElementById('province').value;
+      const city = document.getElementById('city').value;
+      const formId = 'register';
+
+      if (password !== confirmPassword) {
+        showMessage('error', 'Le password non corrispondono.', formId);
+        return;
+      }
+
+      showMessage('loading', '', formId);
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Salva i dati utente in Firestore
+        await setDoc(doc(db, "users", user.uid), {
+          name: name,
+          email: email,
+          region: region,
+          province: province,
+          city: city,
+          createdAt: new Date()
+        });
+
+        showMessage('success', 'Registrazione completata con successo! 🎉', formId);
+        // Reindirizza l'utente a index.html
+        window.location.href = 'index.html';
+
+      } catch (error) {
+        console.error("Registration failed:", error);
+        showMessage('error', getErrorMessage(error.code), formId);
+      }
+    }
+    
+    // --- Regioni e Province (rimangono uguali) ---
+    const provinceByRegion = {
+      "Abruzzo": ["L'Aquila","Chieti","Pescara","Teramo"],
+      "Basilicata": ["Potenza","Matera"],
+      "Calabria": ["Catanzaro","Cosenza","Crotone","Reggio Calabria","Vibo Valentia"],
+      "Campania": ["Avellino","Benevento","Caserta","Napoli","Salerno"],
+      "Emilia-Romagna": ["Bologna","Ferrara","Forlì-Cesena","Modena","Parma","Piacenza","Ravenna","Reggio Emilia","Rimini"],
+      "Friuli Venezia Giulia": ["Gorizia","Pordenone","Trieste","Udine"],
+      "Lazio": ["Frosinone","Latina","Rieti","Roma","Viterbo"],
+      "Liguria": ["Genova","Imperia","La Spezia","Savona"],
+      "Lombardia": ["Bergamo","Brescia","Como","Cremona","Lecco","Lodi","Mantova","Milano","Monza e Brianza","Pavia","Sondrio","Varese"],
+      "Marche": ["Ancona","Ascoli Piceno","Fermo","Macerata","Pesaro e Urbino"],
+      "Molise": ["Campobasso","Isernia"],
+      "Piemonte": ["Alessandria","Asti","Biella","Cuneo","Novara","Torino","Verbano-Cusio-Ossola","Vercelli"],
+      "Puglia": ["Bari","Barletta-Andria-Trani","Brindisi","Foggia","Lecce","Taranto"],
+      "Sardegna": ["Cagliari","Nuoro","Oristano","Sassari","Sud Sardegna"],
+      "Sicilia": ["Agrigento","Caltanissetta","Catania","Enna","Messina","Palermo","Ragusa","Siracusa","Trapani"],
+      "Toscana": ["Arezzo","Firenze","Grosseto","Livorno","Lucca","Massa-Carrara","Pisa","Pistoia","Prato","Siena"],
+      "Trentino-Alto Adige": ["Bolzano","Trento"],
+      "Umbria": ["Perugia","Terni"],
+      "Valle d'Aosta": ["Aosta"],
+      "Veneto": ["Belluno","Padova","Rovigo","Treviso","Venezia","Verona","Vicenza"]
+    };
+
+    function loadRegions() {
+      const regionSelect = document.getElementById('region');
+      Object.keys(provinceByRegion).forEach(region => {
+        const opt = document.createElement('option');
+        opt.value = region;
+        opt.textContent = region;
+        regionSelect.appendChild(opt);
+      });
+    }
+
+    function loadProvinces() {
+      const region = document.getElementById('region').value;
+      const provinceSelect = document.getElementById('province');
+      provinceSelect.innerHTML = '<option value="">Seleziona Provincia</option>';
+      if (region && provinceByRegion[region]) {
+        provinceByRegion[region].forEach(prov => {
+          const opt = document.createElement('option');
+          opt.value = prov;
+          opt.textContent = prov;
+          provinceSelect.appendChild(opt);
+        });
+      }
+    }
+
+    // Avvio
+    window.addEventListener('load', loadRegions);
+
+    let currentTab='login';
+    function switchTab(tab){
+      document.querySelectorAll('.tab-button').forEach(btn=>btn.classList.remove('active'));
+      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+      document.querySelectorAll('.form-content').forEach(form=>form.classList.remove('active'));
+      document.getElementById(`${tab}-form`).classList.add('active');
+      currentTab=tab;
+    }
+
+    // Rende le funzioni globali in modo che gli attributi 'onclick' e 'onsubmit' nel markup HTML possano accedervi
+    window.switchTab = switchTab;
+    window.handleLogin = handleLogin;
+    window.handleRegister = handleRegister;
+    window.loadRegions = loadRegions;
+    window.loadProvinces = loadProvinces;
+
+    // Listener per monitorare lo stato di autenticazione dell'utente (opzionale)
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            console.log("Utente autenticato:", user.email);
+            // Qui puoi aggiornare la UI per mostrare che l'utente è loggato
+        } else {
+            console.log("Nessun utente autenticato.");
+        }
+    });
+
+  </script>
+</body>
+</html>
